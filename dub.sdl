@@ -1,0 +1,10 @@
+name "sbylib-collision"
+description "A minimal D application."
+authors "sobaya"
+copyright "Copyright © 2019, sobaya"
+license "proprietary"
+
+targetType "library"
+targetPath "lib"
+
+dependency "sbylib-graphics" version="*"

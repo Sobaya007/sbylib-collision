@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/sbylib-collision-example
+sbylib-collision-example.so
+sbylib-collision-example.dylib
+sbylib-collision-example.dll
+sbylib-collision-example.a
+sbylib-collision-example.lib
+sbylib-collision-example-test-*
+*.exe
+*.o
+*.obj
+*.lst
