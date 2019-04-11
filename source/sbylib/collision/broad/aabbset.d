@@ -11,11 +11,11 @@ class AABBSet {
     }
 
     private Tree root; 
-    private this(CollisionShape[] shapeList) {
+    private this(ShapePair[] shapeList) {
         this.root = buildTree(shapeList);
     }
 
-    private Tree buildTree(CollisionShape[] shapeList) 
+    private Tree buildTree(ShapePair[] shapeList) 
         in (shapeList.length > 0)
     {
         import std.algorithm : map, reduce, sort, minElement, maxElement;
@@ -41,19 +41,36 @@ class AABBSet {
         return new Node([buildTree(shapeList[0..$/2]), buildTree(shapeList[$/2..$])]);
     }
 
-    private void detect(MyType : CollisionShape, YourType : CollisionShape)(YourType shape, CollisionDetectCallback!(MyType, YourType) callback) {
+    private void detect
+        (MyType : CollisionShape, YourType : CollisionShape)
+        (YourType shape, CollisionDetectCallback!(MyType, YourType) callback) 
+    {
         if (auto node = cast(Node)root) node.detect!(MyType, YourType)(shape, callback);
         else if (auto leaf = cast(Leaf)root) leaf.detect!(MyType, YourType)(shape, callback);
         else assert(false);
     }
 
-    private alias CollisionDetectCallback(MyType, YourType) = void delegate(MyType, YourType, CollisionResult!(MyType, YourType));
+    private alias CollisionDetectCallback(MyType, YourType)
+        = void delegate(MyType, YourType, CollisionResult!(MyType, YourType));
+
+    private struct ShapePair {
+        import std.variant : Variant;
+
+        CollisionShape shape;
+        Variant variant;
+        alias shape this;
+
+        this(Shape : CollisionShape)(Shape shape) {
+            this.shape = shape;
+            this.variant = shape;
+        }
+    }
 
     struct Builder {
-        CollisionShape[] shapeList;
+        ShapePair[] shapeList;
 
-        void add(CollisionShape shape) {
-            this.shapeList ~= shape; 
+        void add(Shape : CollisionShape)(Shape shape) {
+            this.shapeList ~= ShapePair(shape); 
         }
 
         auto build() {
@@ -81,20 +98,21 @@ class AABBSet {
     }
 
     private class Leaf : Tree {
-        CollisionShape shape;
-        this(CollisionShape shape) { this.shape = shape; }
+        ShapePair shape;
+        this(ShapePair shape) { this.shape = shape; }
         override AABB getAABB() { return shape.getAABB(); }
 
-        void detect(MyType : CollisionShape, YourType : CollisionShape)(YourType shape, CollisionDetectCallback!(MyType, YourType) callback) {
+        void detect(MyType : CollisionShape, YourType : CollisionShape)
+            (YourType shape, CollisionDetectCallback!(MyType, YourType) callback) {
             import sbylib.collision.narrow : detect;
 
             if (this.shape is shape) return;
             if (intersect(this.getAABB(), shape.getAABB()) is false) return;
 
-            if (auto s1 = cast(MyType)this.shape) {
-                auto info = detect(s1, shape);
+            if (auto s1 = this.shape.variant.peek!MyType) {
+                auto info = detect(*s1, shape);
                 if (info.isNull) return;
-                callback(s1, shape, info.get());
+                callback(*s1, shape, info.get());
             }
         }
     }
