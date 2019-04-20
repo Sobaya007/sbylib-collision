@@ -1,6 +1,7 @@
 import sbylib.graphics;
 import sbylib.editor;
 import sbylib.collision;
+import sbylib.math;
 import sbylib.wrapper.glfw;
 import root;
 
@@ -20,8 +21,10 @@ void entryPoint(Project proj, EventContext context) {
             ball.lVel = vec3(0);
             ball.rot = mat3.identity;
         }
-		ballList[0].pos.y = -1.5;
-		ballList[1].pos.y = -1.;
+        ballList[0].pos.x = 0;
+        ballList[1].pos.x = 0;
+        ballList[0].pos.y = -1.5;
+        ballList[1].pos.y = -1.;
     };
     initialize();
     when(KeyButton.Delete.pressed).then({
