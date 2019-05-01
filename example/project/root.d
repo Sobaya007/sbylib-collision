@@ -13,6 +13,16 @@ void root(Project proj, EventContext context) {
     setupFloor(proj);
     setupBall(proj);
 
+    auto window = proj.get!Window("window");
+    with (context()) {
+        when((Ctrl + KeyButton.KeyR).pressed).then({
+            auto oldTitle = window.title;
+            window.title = "reloading...";
+            proj.reload();
+            window.title = oldTitle;
+        });
+    }
+
     proj.loadErrorHandler = (Exception e) {
         with (GUI()) {
             lineHeight = 18.pixel;

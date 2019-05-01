@@ -1,22 +1,22 @@
-module sbylib.collision.narrow.capsuleplane;
+module sbylib.collision.narrow.capsulepolygon;
 
-import sbylib.collision.shape.plane : CollisionPlane;
+import sbylib.collision.shape.polygon : CollisionPolygon;
 import sbylib.collision.shape.capsule : CollisionCapsule;
 import sbylib.math;
 import std.typecons : Nullable, nullable;
 
-enum CapsulePlaneCollisionType {
+enum CapsulePolygonCollisionType {
     Edge,
     Face,
     Penetrating,
     Parallel
 }
 
-struct CapsulePlaneResult {
+struct CapsulePolygonResult {
     vec3 _pushVector;
-    CapsulePlaneCollisionType type;
+    CapsulePolygonCollisionType type;
 
-    vec3 pushVector(CollisionPlane) {
+    vec3 pushVector(CollisionPolygon) {
         return _pushVector;
     }
 
@@ -25,15 +25,17 @@ struct CapsulePlaneResult {
     }
 }
 
-auto detect(Capsule : CollisionCapsule, Plane : CollisionPlane)
-    (Capsule capsule, Plane plane) {
+auto detect(Capsule : CollisionCapsule, Polygon : CollisionPolygon)
+    (Capsule capsule, Polygon plane) {
     return detect(plane, capsule);
 }
 
-Nullable!(CapsulePlaneResult) detect(Plane : CollisionPlane, Capsule : CollisionCapsule)
-    (Plane plane, Capsule capsule) {
+Nullable!(CapsulePolygonResult) detect(Polygon : CollisionPolygon, Capsule : CollisionCapsule)
+    (Polygon plane, Capsule capsule) {
     import std.algorithm : map, maxElement;
     import std.math : abs;
+
+    if (plane.vertices.length < 3) return typeof(return).init;
 
     const p0 = plane.vertices[0];
     const n = normalize(cross(plane.vertices[0] - plane.vertices[1], plane.vertices[1] - plane.vertices[2]));
@@ -48,7 +50,7 @@ Nullable!(CapsulePlaneResult) detect(Plane : CollisionPlane, Capsule : Collision
     if (r.dist > capsule.radius) return typeof(return).init;
 
     const depth = capsule.ends[].map!(end => dot(end - p0, n)).maxElement + capsule.radius;
-    return nullable(CapsulePlaneResult(r.pushVector * depth, r.type));
+    return nullable(CapsulePolygonResult(r.pushVector * depth, r.type));
 }
 
 private auto segPoly(const vec3[2] ends, const vec3 n, const vec3[] ps) {
@@ -83,7 +85,7 @@ private auto segPoly(const vec3[2] ends, const vec3 n, const vec3[] ps) {
     struct PolySegResult {
         float dist;
         vec3 pushVector;
-        CapsulePlaneCollisionType type;
+        CapsulePolygonCollisionType type;
     }
 
     const v = ends[1] - ends[0];
@@ -94,36 +96,36 @@ private auto segPoly(const vec3[2] ends, const vec3 n, const vec3[] ps) {
     if (denom != 0) {
         const t1 = clamp(dot(ps[0] - ends[0], n) / denom, 0, 1);
         const p = ends[0] + t1 * v;
-        auto ss = 4.iota.map!(i => dot(n, cross(ps[(i+1)%$] - ps[i], ps[i] - p)));
+        auto ss = ps.length.iota.map!(i => dot(n, cross(ps[(i+1)%$] - ps[i], ps[i] - p)));
         if (ss.all!(s => s > 0) || ss.all!(s => s < 0)) {
             if (t1 == 0 || t1 == 1) {
                 // 線分が片側に寄っているとき
                 // 1
                 const dist = abs(dot(ps[0] - p, n));
-                return PolySegResult(dist, n, CapsulePlaneCollisionType.Face);
+                return PolySegResult(dist, n, CapsulePolygonCollisionType.Face);
             } else {
                 // 3
-                return PolySegResult(0, n, CapsulePlaneCollisionType.Penetrating);
+                return PolySegResult(0, n, CapsulePolygonCollisionType.Penetrating);
             }
         } else {
             // 2, 4
-            const r = 4.iota.map!(i => segseg(ends, [ps[i], ps[(i+1)%$]])).reduce!min;
-            return PolySegResult(r.length, n, CapsulePlaneCollisionType.Edge);
+            const r = ps.length.iota.map!(i => segseg(ends, [ps[i], ps[(i+1)%$]])).reduce!min;
+            return PolySegResult(r.length, n, CapsulePolygonCollisionType.Edge);
         }
     } else {
-        auto ss0 = 4.iota.map!(i => dot(n, cross(ps[(i+1)%$] - ps[i], ps[i] - ends[0])));
-        auto ss1 = 4.iota.map!(i => dot(n, cross(ps[(i+1)%$] - ps[i], ps[i] - ends[1])));
+        auto ss0 = ps.length.iota.map!(i => dot(n, cross(ps[(i+1)%$] - ps[i], ps[i] - ends[0])));
+        auto ss1 = ps.length.iota.map!(i => dot(n, cross(ps[(i+1)%$] - ps[i], ps[i] - ends[1])));
         const sInFaceRegion = ss0.all!(s => s > 0) || ss0.all!(s => s < 0);
         const eInFaceRegion = ss1.all!(s => s > 0) || ss1.all!(s => s < 0);
         if (sInFaceRegion && eInFaceRegion) {
             //ポリゴンは凸形状なので、端点が両方とも面領域に入っていれば全体が面領域に入っている
             // 5
             const dist = abs(dot(ps[0] - ends[0], n));
-            return PolySegResult(dist, n, CapsulePlaneCollisionType.Parallel);
+            return PolySegResult(dist, n, CapsulePolygonCollisionType.Parallel);
         } else {
             // 6
-            const r = 4.iota.map!(i => segseg(ends, [ps[i], ps[(i+1)%$]])).reduce!min;
-            return PolySegResult(r.length, n, CapsulePlaneCollisionType.Parallel);
+            const r = ps.length.iota.map!(i => segseg(ends, [ps[i], ps[(i+1)%$]])).reduce!min;
+            return PolySegResult(r.length, n, CapsulePolygonCollisionType.Parallel);
         }
     }
 }
