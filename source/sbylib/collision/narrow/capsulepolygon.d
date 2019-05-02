@@ -34,6 +34,7 @@ Nullable!(CapsulePolygonResult) detect(Polygon : CollisionPolygon, Capsule : Col
     (Polygon plane, Capsule capsule) {
     import std.algorithm : map, maxElement;
     import std.math : abs;
+    import sbylib.collision.bounds.aabb : intersect;
 
     if (plane.vertices.length < 3) return typeof(return).init;
 
@@ -45,6 +46,7 @@ Nullable!(CapsulePolygonResult) detect(Polygon : CollisionPolygon, Capsule : Col
     const d2 = dot(capsule.ends[1] - p0, n);
     if (d1 > +capsule.radius && d2 > +capsule.radius) return typeof(return).init;
     if (d1 < -capsule.radius && d2 < -capsule.radius) return typeof(return).init;
+    if (intersect(plane.getAABB(), capsule.getAABB()) is false) return typeof(return).init;
 
     const r = segPoly(capsule.ends, n, plane.vertices);
     if (r.dist > capsule.radius) return typeof(return).init;
@@ -78,7 +80,7 @@ private auto segPoly(const vec3[2] ends, const vec3 n, const vec3[] ps) {
     //   2. 辺と線分の外積
     // なお、返り値の法線は必ずポリゴンの表方向にしか押し出さないとする
 
-    import std.algorithm : map, all, clamp, reduce;
+    import std.algorithm : map, all, clamp, reduce, minElement;
     import std.range : iota;
     import std.math : abs;
 
@@ -109,7 +111,7 @@ private auto segPoly(const vec3[2] ends, const vec3 n, const vec3[] ps) {
             }
         } else {
             // 2, 4
-            const r = ps.length.iota.map!(i => segseg(ends, [ps[i], ps[(i+1)%$]])).reduce!min;
+            const r = ps.length.iota.map!(i => segseg(ends, [ps[i], ps[(i+1)%$]])).minElement!(v => v.length);
             return PolySegResult(r.length, n, CapsulePolygonCollisionType.Edge);
         }
     } else {
@@ -131,7 +133,7 @@ private auto segPoly(const vec3[2] ends, const vec3 n, const vec3[] ps) {
 }
 
 private vec3 segseg(const vec3[2] ends0, const vec3[2] ends1) {
-    import std.algorithm : clamp;
+    import std.algorithm : clamp, minElement;
 
     if (ends0[0] == ends0[1]) {
         if (ends1[0] == ends1[1]) {
@@ -157,33 +159,14 @@ private vec3 segseg(const vec3[2] ends0, const vec3[2] ends1) {
         denom = 1 / denom;
         const t1 = (d1 - dv * d2) * denom;
         const t2 = (d1 * dv - d2) * denom;
-        if (0 <= t1 && t1 <= 1) {
-            if (0 <= t2 && t2 <= 1) {
-                // line & line
-                const p1 = ends0[0] + t1 * v1;
-                const p2 = ends1[0] + t2 * v2;
-                return p1 - p2;
-            } else {
-                // line & point
-                const t2c = clamp(t2, 0, 1);
-                const p2 = ends1[0] + t2c * v2;
-                return segPoint(ends0[0], v1, p2);
-            }
-        } else {
-            if (0 <= t2 && t2 <= 1) {
-                // line & point
-                const t1c = clamp(t1, 0, 1);
-                const p1 = ends0[0] + t1c * v1;
-                return -segPoint(ends1[0], v2, p1);
-            } else {
-                // point & point
-                const t1c = clamp(t1, 0, 1);
-                const t2c = clamp(t2, 0, 1);
-                const p1 = ends0[0] + t1c * v1;
-                const p2 = ends1[0] + t2c * v2;
-                return p1 - p2;
-            }
+        if (0 <= t1 && t1 <= 1 && 0 <= t2 && t2 <= 1) {
+            // line & line
+            const p1 = ends0[0] + t1 * v1;
+            const p2 = ends1[0] + t2 * v2;
+            return p1 - p2;
         }
+        return [segPoint(ends0, ends1[0]), segPoint(ends0, ends1[1]), segPoint(ends1, ends0[0]), segPoint(ends1, ends0[1])]
+            .minElement!(v => length(v));
     }
     // parallel
     vec3 v = ends0[0] - ends1[0];
