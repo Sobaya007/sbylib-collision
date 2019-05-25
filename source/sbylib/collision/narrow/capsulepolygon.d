@@ -31,12 +31,12 @@ auto detect(Capsule : CollisionCapsule, Polygon : CollisionPolygon)
 }
 
 Nullable!(CapsulePolygonResult) detect(Polygon : CollisionPolygon, Capsule : CollisionCapsule)
-    (Polygon plane, Capsule capsule) {
+    (Polygon plane, Capsule capsule) 
+    in (plane.vertices.length >= 3)
+{
     import std.algorithm : map, maxElement;
     import std.math : abs;
     import sbylib.collision.bounds.aabb : intersect;
-
-    if (plane.vertices.length < 3) return typeof(return).init;
 
     const p0 = plane.vertices[0];
     const n = normalize(cross(plane.vertices[0] - plane.vertices[1], plane.vertices[1] - plane.vertices[2]));
