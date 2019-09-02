@@ -1,6 +1,6 @@
 module sbylib.collision.shape.capsule;
 
-import sbylib.graphics;
+import sbylib.math;
 import sbylib.collision.shape.shape;
 import sbylib.collision.bounds.aabb;
 
@@ -9,8 +9,10 @@ interface CollisionCapsule : CollisionShape {
     float radius();
 
     mixin template ImplAABB() {
+        import sbylib.math : vmin = min, vmax = max;
+
         override AABB getAABB() {
-            return AABB(min(ends[0], ends[1]) - vec3(radius), max(ends[0], ends[1]) + vec3(radius));
+            return AABB(vmin(ends[0], ends[1]) - vec3(radius), vmax(ends[0], ends[1]) + vec3(radius));
         }
     }
 }

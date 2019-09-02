@@ -1,6 +1,6 @@
 module sbylib.collision.shape.sphere;
 
-import sbylib.graphics;
+import sbylib.math;
 import sbylib.collision.shape.shape;
 import sbylib.collision.bounds.aabb;
 

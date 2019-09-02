@@ -7,4 +7,4 @@ license "proprietary"
 targetType "library"
 targetPath "lib"
 
-dependency "sbylib-graphics" version="*"
+dependency "sbylib-math" version="*"
